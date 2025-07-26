@@ -1,10 +1,10 @@
-import torch, random
-from math import prod
+import torch, random, sys
+from math import log
 from collections import deque
 from model import Model
 from pytetris import PieceKind, Piece, Board
 
-checkpoint = torch.load("checkpoints/090000-model.pth", "cpu")
+checkpoint = torch.load(sys.argv[1], "cpu")
 model = Model(8)
 model.load_state_dict(checkpoint["model"])
 model.eval()
@@ -46,30 +46,56 @@ def get_score_matrix(board: Board, queue: list[PieceKind]) -> torch.Tensor:
 
         return pred
 
+def beam_search(board: Board, queue: list[PieceKind], depth: int) -> tuple[float, Piece]:
+    
+    score_matrix = get_score_matrix(board, queue)
+    def score_move(piece: Piece) -> float:
+        return sum(
+            log(score_matrix[min(y, 19), x].item())
+            for x, y in piece.cells()
+        )
+    
+    active_a = Piece.spawned(queue[0])
+    active_b = Piece.spawned(queue[1])
+    moves = get_moves(board, active_a) | get_moves(board, active_b)
+
+    scored_moves = [(score_move(move), move) for move in moves]
+    scored_moves.sort(key=lambda p: p[0], reverse=True)
+
+    if depth == 0:
+        return scored_moves[0]
+
+    best = None
+    for score, move in scored_moves[:2]:
+        child_board = [row.copy() for row in board]
+        move.lock_to(child_board)
+
+        child_queue = queue.copy()
+        if move.kind == active_a.kind:
+            child_queue.pop(0)
+        else:
+            child_queue.pop(1)
+        
+        child_score, _ = beam_search(child_board, child_queue, depth - 1)
+        if best is None or best[0] < child_score + score:
+            best = (child_score + score), move
+
+    assert best is not None
+    return best
+
 board: Board = [[None] * 10 for _ in range(40)]
 queue: list[PieceKind] = []
 
 while True:
-    while len(queue) < 5:
+    while len(queue) < 9:
         bag = list(PieceKind)
         random.shuffle(bag)
         queue.extend(bag)
 
-    score_matrix = get_score_matrix(board, queue)
-    # print(score_matrix.round(decimals=1).reshape(20, 10))
+    score, best = beam_search(board, queue, 4)
 
-    active_a = Piece.spawned(queue[0])
-    active_b = Piece.spawned(queue[1])
-
-    best = max(
-        get_moves(board, active_a) | get_moves(board, active_b),
-        key=lambda piece: sum(
-            score_matrix[min(y, 19), x].item()
-            for x, y in piece.cells()
-        ),
-    )
     best.lock_to(board)
-    if best.kind == active_a:
+    if best.kind == queue[0]:
         queue.pop(0)
     else:
         queue.pop(1)
