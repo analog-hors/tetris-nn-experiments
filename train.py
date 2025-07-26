@@ -9,7 +9,7 @@ LOG_INTERVAL = 10
 CHECKPOINT_INTERVAL = 5000
 
 if __name__ == "__main__":
-    dataset = TetrisDataset(open("data.bin", "rb"))
+    dataset = TetrisDataset(open("cc-5k-garbage.bin", "rb"))
     dataloader = DataLoader(
         dataset,
         batch_size=1024,

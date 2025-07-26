@@ -7,6 +7,8 @@ use cold_clear::evaluation::Standard;
 use libtetris::*;
 
 const MIN_QUEUE: usize = 6;
+const GARBAGE_INTERVAL: u64 = 32;
+const MAX_GARBAGE: u32 = 8;
 const LOG_INTERVAL: u64 = 10_000;
 
 struct State {
@@ -20,15 +22,15 @@ struct State {
 impl State {
     fn new() -> Self {
         let mut this = Self {
-            rng: Pcg64::seed_from_u64(thread_rng().r#gen()),
+            rng: Pcg64::seed_from_u64(random()),
             bag: Vec::new(),
             queue: Vec::new(),
             board: Board::new(),
             bot: Interface::launch(
                 Board::new(),
                 Options {
-                    min_nodes: 2500,
-                    max_nodes: 2500,
+                    min_nodes: 5000,
+                    max_nodes: 5000,
                     ..Default::default()
                 },
                 Standard::default(),
@@ -82,6 +84,13 @@ impl State {
         self.board.lock_piece(mv.expected_location);
         self.bot.play_next_move(mv.expected_location);
     }
+
+    fn add_garbage(&mut self, n: u32) {
+        for _ in 0..n {
+            self.board.add_garbage(self.rng.gen_range(0, 10));
+        }
+        self.bot.reset(self.board.get_field(), self.board.b2b_bonus, self.board.combo);
+    }
 }
 
 fn piece_to_u8(piece: Piece) -> u8 {
@@ -127,9 +136,15 @@ fn main() {
     let mut last_log = Instant::now();
     loop {
         let mut state = State::new();
+        let mut moves = 0;
         while let Some((mv, _)) = state.get_move() {
             write_sample(&mut stdout, &state, &mv);
             state.play_move(mv);
+            moves += 1;
+
+            if moves % GARBAGE_INTERVAL == 0 {
+                state.add_garbage(thread_rng().gen_range(1, MAX_GARBAGE + 1));
+            }
 
             written += 1;
             if written % LOG_INTERVAL == 0 {
