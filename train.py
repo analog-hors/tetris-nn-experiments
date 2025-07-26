@@ -6,10 +6,10 @@ from dataset import TetrisDataset
 
 DEVICE = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 LOG_INTERVAL = 10
-CHECKPOINT_INTERVAL = 5000
+CHECKPOINT_INTERVAL = 1000
 
 if __name__ == "__main__":
-    dataset = TetrisDataset(open("cc-5k-garbage.bin", "rb"))
+    dataset = TetrisDataset(open("cc-policy.bin", "rb"))
     dataloader = DataLoader(
         dataset,
         batch_size=1024,

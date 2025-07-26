@@ -42,7 +42,7 @@ def get_score_matrix(board: Board, queue: list[PieceKind]) -> torch.Tensor:
             queue_tensor[i] = list(PieceKind).index(queue[i])
 
         pred = model(field.unsqueeze(0), queue_tensor.unsqueeze(0))
-        pred = torch.sigmoid(pred).reshape((20, 10))
+        pred = torch.sigmoid(pred).reshape((7, 4, 20, 10))
 
         return pred
 
@@ -50,10 +50,9 @@ def beam_search(board: Board, queue: list[PieceKind], depth: int) -> tuple[float
     
     score_matrix = get_score_matrix(board, queue)
     def score_move(piece: Piece) -> float:
-        return sum(
-            log(score_matrix[min(y, 19), x].item())
-            for x, y in piece.cells()
-        )
+        p = list(PieceKind).index(piece.kind)
+        if piece.y >= 20: return 0.0
+        return log(score_matrix[p, piece.rotation, piece.y, piece.x].item())
     
     active_a = Piece.spawned(queue[0])
     active_b = Piece.spawned(queue[1])
@@ -92,7 +91,7 @@ while True:
         random.shuffle(bag)
         queue.extend(bag)
 
-    score, best = beam_search(board, queue, 4)
+    score, best = beam_search(board, queue, 1)
 
     best.lock_to(board)
     if best.kind == queue[0]:

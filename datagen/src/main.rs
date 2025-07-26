@@ -29,8 +29,8 @@ impl State {
             bot: Interface::launch(
                 Board::new(),
                 Options {
-                    min_nodes: 5000,
-                    max_nodes: 5000,
+                    min_nodes: 2500,
+                    max_nodes: 2500,
                     ..Default::default()
                 },
                 Standard::default(),
@@ -114,10 +114,16 @@ fn write_sample(out: &mut impl std::io::Write, state: &State, mv: &Move) {
             }
         }
     }
-    for (x, y) in mv.expected_location.cells() {
-        if y < 20 {
-            field_buf[(y * 10 + x) as usize] = 2;
-        }
+
+    if mv.expected_location.y < 20 {
+        let kind = mv.expected_location.kind;
+        let index = mv.expected_location.y * 10 + mv.expected_location.x;
+        field_buf[index as usize] = 2 + piece_to_u8(kind.0) * 4 + match kind.1 {
+            RotationState::North => 0,
+            RotationState::East => 1,
+            RotationState::South => 2,
+            RotationState::West => 3,
+        };
     }
 
     let mut queue_buf = [0; MIN_QUEUE - 1];

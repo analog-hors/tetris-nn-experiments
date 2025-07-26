@@ -22,7 +22,7 @@ class Model(nn.Module):
         self.piece_embed = nn.Embedding(7, piece_embed_dim)
 
         self.proj_in = nn.Conv1d(10 + 5 * piece_embed_dim, 128, 1)
-        self.proj_out = nn.Conv1d(128, 10, 1)
+        self.proj_out = nn.Conv1d(128, 10 * 7 * 4, 1)
 
         self.block1 = RotaryTransformerBlock(128, 128, 3, 2, 0.05)
         self.block2 = RotaryTransformerBlock(128, 128, 3, 2, 0.05)
@@ -56,6 +56,8 @@ class Model(nn.Module):
         combined = queue.unsqueeze(2).expand((-1, -1, 20))
         combined = torch.cat((field, combined), 1)
 
+        # Apply block.
+        # x: (batch, 10 * 7 * 4, 20)
         x = self.proj_in(combined)
         x = self.block1(x)
         x = self.block2(x)
@@ -67,7 +69,8 @@ class Model(nn.Module):
         
         # Transpose and flatten back to input shape.
         # pred: (batch, 200)
-        pred = x.transpose(1, 2)
-        pred = pred.flatten(1)
+        pred = x.reshape((-1, 7 * 4, 10, 20))
+        pred = pred.transpose(2, 3)
+        pred = pred.flatten(2)
 
         return pred

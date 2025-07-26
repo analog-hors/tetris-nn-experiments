@@ -18,7 +18,7 @@ class TetrisDataset(Dataset):
 
         field = (field_bytes == 1).float()
         queue = queue_bytes.long()
-        target = (field_bytes == 2).float()
+        target = (field_bytes == torch.arange(2, 2 + 7 * 4).unsqueeze(1)).float()
 
         return field, queue, target
 
