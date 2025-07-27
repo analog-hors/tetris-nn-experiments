@@ -1,16 +1,16 @@
 import torch, torch.nn as nn, torch.nn.functional as F
 
-from .rotary_mha import RotaryMultiheadAttention
+from .mha import MultiheadAttention
 from .channel_layer_norm import ChannelLayerNorm
 
-class RotaryTransformerBlock(nn.Module):
+class TransformerBlock(nn.Module):
     in_channels: int
     hidden_channels: int
     kernel_size: int
     num_heads: int
     p_dropout: float
 
-    attn: RotaryMultiheadAttention
+    attn: MultiheadAttention
     norm1: ChannelLayerNorm
     conv1: nn.Conv1d
     conv2: nn.Conv1d
@@ -34,7 +34,7 @@ class RotaryTransformerBlock(nn.Module):
 
         assert kernel_size % 2 != 0
 
-        self.attn = RotaryMultiheadAttention(
+        self.attn = MultiheadAttention(
             in_channels,
             in_channels,
             num_heads,
