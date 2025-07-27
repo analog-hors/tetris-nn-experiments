@@ -10,7 +10,7 @@ model.eval()
 
 torch.onnx.export(
     model,
-    (torch.zeros((1, 200)), torch.zeros((1, 5), dtype=torch.long)),
+    (torch.zeros((1, 20, 10)), torch.zeros((1, 5), dtype=torch.long)),
     out_path,
     input_names=["field", "queue"],
     output_names=["pred"],

@@ -19,11 +19,8 @@ fn load_model(path: &str) -> ort::Result<Session> {
 }
 
 fn infer(model: &mut Session, board: &Board) -> Array4<f32> {
-    let field = field_tensor::<f32>(board);
-    let queue = queue_tensor::<i64>(board, 5);
-
-    let field = field.to_shape([1, 200]).unwrap();
-    let queue = queue.to_shape([1, 5]).unwrap();
+    let field = field_tensor::<f32>(board).insert_axis(Axis(0));
+    let queue = queue_tensor::<i64>(board, 5).insert_axis(Axis(0));
 
     let inputs = ort::inputs![
         "field" => TensorRef::from_array_view(&field).unwrap(),

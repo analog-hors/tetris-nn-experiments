@@ -18,14 +18,13 @@ class TetrisDataset(Dataset):
         move_bytes = buffer[205:]
 
         field = torch.frombuffer(bytearray(field_bytes), dtype=torch.uint8)
-        field = field.float()
+        field = field.reshape((20, 10)).float()
 
         queue = torch.frombuffer(bytearray(queue_bytes), dtype=torch.uint8)
         queue = queue.long()
 
         target = torch.zeros((7, 4, 20, 10))
         target[*move_bytes] = 1.0
-        target = target.reshape((28, 200))
 
         return field, queue, target
 

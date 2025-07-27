@@ -22,7 +22,7 @@ class Model(nn.Module):
         self.piece_embed = nn.Embedding(7, piece_embed_dim)
 
         self.proj_in = nn.Conv1d(10 + 5 * piece_embed_dim, 128, 1)
-        self.proj_out = nn.Conv1d(128, 10 * 7 * 4, 1)
+        self.proj_out = nn.Conv1d(128, 7 * 4 * 10, 1)
 
         self.block1 = RotaryTransformerBlock(128, 128, 3, 2, 0.05)
         self.block2 = RotaryTransformerBlock(128, 128, 3, 2, 0.05)
@@ -34,11 +34,11 @@ class Model(nn.Module):
     def forward(self, field: torch.Tensor, queue: torch.Tensor) -> torch.Tensor:
         """
         Input shapes:
-            - field: `(batch, 200)`
+            - field: `(batch, 20, 10)`
             - queue: `(batch, 5)`
 
         Returned shapes:
-            - output: `(batch, in_channels, seq_len)`
+            - output: `(batch, 7, 4, 20, 10)`
         """
 
         # Embed each piece and flatten.
@@ -46,9 +46,8 @@ class Model(nn.Module):
         queue = self.piece_embed(queue)
         queue = queue.flatten(1)
 
-        # Reshape and transpose field to interpret columns as channels.
+        # Transpose field to interpret columns as channels.
         # field: (batch, 10, 20)
-        field = field.reshape((-1, 20, 10))
         field = field.transpose(1, 2)
 
         # Combine field with queue expanded per-row.
@@ -56,8 +55,8 @@ class Model(nn.Module):
         combined = queue.unsqueeze(2).expand((-1, -1, 20))
         combined = torch.cat((field, combined), 1)
 
-        # Apply block.
-        # x: (batch, 10 * 7 * 4, 20)
+        # Apply blocks.
+        # pred: (batch, 7 * 4 * 10, 20)
         x = self.proj_in(combined)
         x = self.block1(x)
         x = self.block2(x)
@@ -65,12 +64,11 @@ class Model(nn.Module):
         x = self.block4(x)
         x = self.block5(x)
         x = self.block6(x)
-        x = self.proj_out(x)
+        pred = self.proj_out(x)
         
-        # Transpose and flatten back to input shape.
+        # Reshape and transpose to output shape.
         # pred: (batch, 200)
-        pred = x.reshape((-1, 7 * 4, 10, 20))
-        pred = pred.transpose(2, 3)
-        pred = pred.flatten(2)
+        pred = pred.reshape((-1, 7, 4, 10, 20))
+        pred = pred.transpose(-1, -2)
 
         return pred
