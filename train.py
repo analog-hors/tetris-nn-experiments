@@ -39,7 +39,7 @@ if __name__ == "__main__":
 
         optimizer.zero_grad()
         pred = model(field, queue)
-        loss = F.binary_cross_entropy_with_logits(pred, target)
+        loss = F.nll_loss(pred.flatten(1), target)
 
         loss.backward()
         optimizer.step()

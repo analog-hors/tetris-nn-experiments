@@ -23,8 +23,9 @@ class TetrisDataset(Dataset):
         queue = torch.frombuffer(bytearray(queue_bytes), dtype=torch.uint8)
         queue = queue.long()
 
-        target = torch.zeros((7, 4, 20, 10))
-        target[*move_bytes] = 1.0
+        target = torch.tensor(0)
+        for index, size in zip(move_bytes, (7, 4, 20, 10)):
+            target = target * size + index
 
         return field, queue, target
 

@@ -66,8 +66,12 @@ class Model(nn.Module):
         x = self.block6(x)
         pred = self.proj_out(x)
         
+        # Flatten and apply log softmax.
+        pred = pred.flatten(1)
+        pred = F.log_softmax(pred, 1)
+
         # Reshape and transpose to output shape.
-        # pred: (batch, 200)
+        # pred: (batch, 7, 4, 20, 10)
         pred = pred.reshape((-1, 7, 4, 10, 20))
         pred = pred.transpose(-1, -2)
 
