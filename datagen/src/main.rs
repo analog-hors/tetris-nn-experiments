@@ -97,7 +97,7 @@ impl State {
 fn write_sample(out: &mut impl std::io::Write, state: &State, mv: &Move) -> bool {
     let field = field_tensor::<u8>(&state.board);
     let queue = queue_tensor::<u8>(&state.board, MIN_QUEUE - 1);
-    let Some(target) = move_index(mv.expected_location) else {
+    let Some(target) = move_index(mv.expected_location.canonical()) else {
         return false;
     };
     let target = target.map(|i| i.try_into().unwrap());

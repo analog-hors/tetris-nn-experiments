@@ -46,7 +46,7 @@ fn search(model: &mut Session, board: &Board, beam: usize, depth: u32) -> Option
     for piece in [main, hold] {
         if let Some(spawned) = SpawnRule::Row19Or20.spawn(piece, board) {
             for mv in find_moves(board, spawned, MovementMode::ZeroG) {
-                let logit = match move_index(mv.location) {
+                let logit = match move_index(mv.location.canonical()) {
                     Some(index) => policy[index],
                     None => -100.0,
                 };
