@@ -5,6 +5,7 @@ use rand_pcg::Pcg64;
 use cold_clear::{Interface, Options, Info};
 use cold_clear::evaluation::Standard;
 use libtetris::*;
+use nn_encoding::*;
 
 const MIN_QUEUE: usize = 6;
 const GARBAGE_INTERVAL: u64 = 32;
@@ -93,47 +94,19 @@ impl State {
     }
 }
 
-fn piece_to_u8(piece: Piece) -> u8 {
-    match piece {
-        Piece::I => 0,
-        Piece::J => 1,
-        Piece::L => 2,
-        Piece::O => 3,
-        Piece::S => 4,
-        Piece::T => 5,
-        Piece::Z => 6,
-    }
-}
+fn write_sample(out: &mut impl std::io::Write, state: &State, mv: &Move) -> bool {
+    let field = field_tensor::<u8>(&state.board);
+    let queue = queue_tensor::<u8>(&state.board, MIN_QUEUE - 1);
+    let Some(target) = move_index(mv.expected_location) else {
+        return false;
+    };
+    let target = target.map(|i| i.try_into().unwrap());
 
-fn write_sample(out: &mut impl std::io::Write, state: &State, mv: &Move) {
-    let mut field_buf = [0; 200];
-    for y in 0..20 {
-        for x in 0..10 {
-            if state.board.occupied(x, y) {
-                field_buf[(y * 10 + x) as usize] = 1;
-            }
-        }
-    }
+    out.write_all(&field.flatten().to_vec()).unwrap();
+    out.write_all(&queue.to_vec()).unwrap();
+    out.write_all(&target).unwrap();
 
-    if mv.expected_location.y < 20 {
-        let kind = mv.expected_location.kind;
-        let index = mv.expected_location.y * 10 + mv.expected_location.x;
-        field_buf[index as usize] = 2 + piece_to_u8(kind.0) * 4 + match kind.1 {
-            RotationState::North => 0,
-            RotationState::East => 1,
-            RotationState::South => 2,
-            RotationState::West => 3,
-        };
-    }
-
-    let mut queue_buf = [0; MIN_QUEUE - 1];
-    let queued = state.board.hold_piece.iter().chain(&state.queue);
-    for (out, &piece) in queue_buf.iter_mut().zip(queued) {
-        *out = piece_to_u8(piece);
-    }
-
-    out.write_all(&field_buf).unwrap();
-    out.write_all(&queue_buf).unwrap();
+    true
 }
 
 fn main() {
@@ -144,22 +117,22 @@ fn main() {
         let mut state = State::new();
         let mut moves = 0;
         while let Some((mv, _)) = state.get_move() {
-            write_sample(&mut stdout, &state, &mv);
-            state.play_move(mv);
-            moves += 1;
-
-            if moves % GARBAGE_INTERVAL == 0 {
-                state.add_garbage(thread_rng().gen_range(1, MAX_GARBAGE + 1));
+            if write_sample(&mut stdout, &state, &mv) {
+                written += 1;
+                if written % LOG_INTERVAL == 0 {
+                    eprintln!(
+                        "{} samples written ({:.0} samples/second)",
+                        written,
+                        LOG_INTERVAL as f64 / last_log.elapsed().as_secs_f64(),
+                    );
+                    last_log = Instant::now();
+                }
             }
 
-            written += 1;
-            if written % LOG_INTERVAL == 0 {
-                eprintln!(
-                    "{} samples written ({:.0} samples/second)",
-                    written,
-                    LOG_INTERVAL as f64 / last_log.elapsed().as_secs_f64(),
-                );
-                last_log = Instant::now();
+            state.play_move(mv);
+            moves += 1;
+            if moves % GARBAGE_INTERVAL == 0 {
+                state.add_garbage(thread_rng().gen_range(1, MAX_GARBAGE + 1));
             }
         }
     }

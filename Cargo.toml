@@ -1,5 +1,7 @@
 [workspace]
 members = [
-    "datagen", "play",
+    "datagen",
+    "nn-encoding",
+    "play",
 ]
 resolver = "3"

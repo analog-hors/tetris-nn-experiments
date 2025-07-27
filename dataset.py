@@ -10,18 +10,25 @@ class TetrisDataset(Dataset):
         self,
         index: int,
     ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
-        self.io.seek(index * 205)
-        buffer = self.io.read(205)
+        self.io.seek(index * 209)
+        buffer = self.io.read(209)
 
-        field_bytes = torch.frombuffer(bytearray(buffer[:200]), dtype=torch.uint8)
-        queue_bytes = torch.frombuffer(bytearray(buffer[200:]), dtype=torch.uint8)
+        field_bytes = buffer[:200]
+        queue_bytes = buffer[200:205] 
+        move_bytes = buffer[205:]
 
-        field = (field_bytes == 1).float()
-        queue = queue_bytes.long()
-        target = (field_bytes == torch.arange(2, 2 + 7 * 4).unsqueeze(1)).float()
+        field = torch.frombuffer(bytearray(field_bytes), dtype=torch.uint8)
+        field = field.float()
+
+        queue = torch.frombuffer(bytearray(queue_bytes), dtype=torch.uint8)
+        queue = queue.long()
+
+        target = torch.zeros((7, 4, 20, 10))
+        target[*move_bytes] = 1.0
+        target = target.reshape((28, 200))
 
         return field, queue, target
 
     def __len__(self) -> int:
         self.io.seek(0, 2)
-        return self.io.tell() // 205
+        return self.io.tell() // 209

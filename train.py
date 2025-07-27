@@ -9,7 +9,7 @@ LOG_INTERVAL = 10
 CHECKPOINT_INTERVAL = 1000
 
 if __name__ == "__main__":
-    dataset = TetrisDataset(open("cc-policy.bin", "rb"))
+    dataset = TetrisDataset(open("data1.bin", "rb"))
     dataloader = DataLoader(
         dataset,
         batch_size=1024,

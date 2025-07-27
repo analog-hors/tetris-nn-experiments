@@ -284,6 +284,7 @@ version = "0.1.0"
 dependencies = [
  "cold-clear",
  "libtetris",
+ "nn-encoding",
  "rand",
  "rand_pcg",
 ]
@@ -656,6 +657,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "nn-encoding"
+version = "0.1.0"
+dependencies = [
+ "libtetris",
+ "ndarray",
+ "num-traits",
+]
+
+[[package]]
 name = "num-complex"
 version = "0.4.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -866,6 +876,7 @@ version = "0.1.0"
 dependencies = [
  "libtetris",
  "ndarray",
+ "nn-encoding",
  "ort",
  "rand",
 ]

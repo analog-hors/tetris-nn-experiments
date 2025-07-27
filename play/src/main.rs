@@ -1,32 +1,13 @@
 use ort::session::Session;
 use ort::session::builder::GraphOptimizationLevel;
 use ort::value::TensorRef;
-use ndarray::Array4;
-use libtetris::*;
 use rand::prelude::*;
+use ndarray::prelude::*;
+
+use libtetris::*;
+use nn_encoding::*;
 
 const MIN_QUEUE: usize = 10;
-
-fn piece_to_u8(piece: Piece) -> u8 {
-    match piece {
-        Piece::I => 0,
-        Piece::J => 1,
-        Piece::L => 2,
-        Piece::O => 3,
-        Piece::S => 4,
-        Piece::T => 5,
-        Piece::Z => 6,
-    }
-}
-
-fn rotation_to_u8(rotation: RotationState) -> u8 {
-    match rotation {
-        RotationState::North => 0,
-        RotationState::East => 1,
-        RotationState::South => 2,
-        RotationState::West => 3,
-    }
-}
 
 fn load_model(path: &str) -> ort::Result<Session> {
     let model = Session::builder()?
@@ -38,24 +19,15 @@ fn load_model(path: &str) -> ort::Result<Session> {
 }
 
 fn infer(model: &mut Session, board: &Board) -> Array4<f32> {
-    let mut field = [0.0; 200];
-    for y in 0..20 {
-        for x in 0..10 {
-            if board.occupied(x, y) {
-                field[(y * 10 + x) as usize] = 1.0f32;
-            }
-        }
-    }
+    let field = field_tensor::<f32>(board);
+    let queue = queue_tensor::<i64>(board, 5);
 
-    let mut queue = [0; 5];
-    let queue_iter = board.hold_piece.into_iter().chain(board.next_queue());
-    for (out, piece) in queue.iter_mut().zip(queue_iter) {
-        *out = piece_to_u8(piece) as i64;
-    }
+    let field = field.to_shape([1, 200]).unwrap();
+    let queue = queue.to_shape([1, 5]).unwrap();
 
     let inputs = ort::inputs![
-        "field" => TensorRef::from_array_view(([1, 200], field.as_slice())).unwrap(),
-        "queue" => TensorRef::from_array_view(([1, 5], queue.as_slice())).unwrap(),
+        "field" => TensorRef::from_array_view(&field).unwrap(),
+        "queue" => TensorRef::from_array_view(&queue).unwrap(),
     ];
 
     let outputs = model.run(inputs).unwrap();
@@ -77,12 +49,10 @@ fn search(model: &mut Session, board: &Board, beam: usize, depth: u32) -> Option
     for piece in [main, hold] {
         if let Some(spawned) = SpawnRule::Row19Or20.spawn(piece, board) {
             for mv in find_moves(board, spawned, MovementMode::ZeroG) {
-                let logit = policy[[
-                    piece_to_u8(piece) as usize,
-                    rotation_to_u8(mv.location.kind.1) as usize,
-                    mv.location.y as usize,
-                    mv.location.x as usize,
-                ]];
+                let logit = match move_index(mv.location) {
+                    Some(index) => policy[index],
+                    None => -100.0,
+                };
                 let logp = -(-logit).exp().ln_1p();
                 moves.push((logp, mv));
             }
