@@ -9,8 +9,8 @@ use nn_encoding::*;
 
 const MIN_QUEUE: usize = 6;
 const GARBAGE_INTERVAL: u64 = 32;
-const MAX_GARBAGE: u32 = 8;
-const LOG_INTERVAL: u64 = 10_000;
+const MAX_GARBAGE: u32 = 15;
+const LOG_INTERVAL: u64 = 1000;
 
 struct State {
     rng: Pcg64,
@@ -30,8 +30,8 @@ impl State {
             bot: Interface::launch(
                 Board::new(),
                 Options {
-                    min_nodes: 2500,
-                    max_nodes: 2500,
+                    min_nodes: 10_000,
+                    max_nodes: 10_000,
                     ..Default::default()
                 },
                 Standard::default(),
