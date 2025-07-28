@@ -121,7 +121,7 @@ checksum = "9555578bc9e57714c812a1f84e4fc5b4d21fcb063490c624de019f7464c91268"
 [[package]]
 name = "cold-clear"
 version = "0.1.0"
-source = "git+https://github.com/MinusKelvin/cold-clear?rev=279edd7#279edd7c3177ff8077f6a930193397814b281f27"
+source = "git+https://github.com/analog-hors/cold-clear?rev=1cd67e6#1cd67e601c6ff908b3ef20731d1fd2a1a581ec58"
 dependencies = [
  "arrayvec",
  "bumpalo",
@@ -571,7 +571,7 @@ dependencies = [
 [[package]]
 name = "libtetris"
 version = "0.1.0"
-source = "git+https://github.com/MinusKelvin/cold-clear?rev=279edd7#279edd7c3177ff8077f6a930193397814b281f27"
+source = "git+https://github.com/analog-hors/cold-clear?rev=1cd67e6#1cd67e601c6ff908b3ef20731d1fd2a1a581ec58"
 dependencies = [
  "arrayvec",
  "enum-map",
@@ -722,7 +722,7 @@ checksum = "42f5e15c9953c5e4ccceeb2e7382a716482c34515315f7b03532b8b4e8393d2d"
 [[package]]
 name = "opening-book"
 version = "0.1.0"
-source = "git+https://github.com/MinusKelvin/cold-clear?rev=279edd7#279edd7c3177ff8077f6a930193397814b281f27"
+source = "git+https://github.com/analog-hors/cold-clear?rev=1cd67e6#1cd67e601c6ff908b3ef20731d1fd2a1a581ec58"
 dependencies = [
  "arrayvec",
  "bincode",
@@ -1309,7 +1309,7 @@ version = "1.6.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "97fee6b57c6a41524a810daee9286c02d7752c4253064d0b05472833a438f675"
 dependencies = [
- "cfg-if 1.0.1",
+ "cfg-if 0.1.10",
  "static_assertions",
 ]
 

@@ -4,8 +4,8 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-cold-clear = { git = "https://github.com/MinusKelvin/cold-clear", rev = "279edd7" }
-libtetris = { git = "https://github.com/MinusKelvin/cold-clear", rev = "279edd7" }
+cold-clear = { git = "https://github.com/analog-hors/cold-clear", rev = "1cd67e6" }
+libtetris = { git = "https://github.com/analog-hors/cold-clear", rev = "1cd67e6" }
 rand = "0.7.0"
 rand_pcg = "0.2.1"
 nn-encoding = { path = "../nn-encoding" }
