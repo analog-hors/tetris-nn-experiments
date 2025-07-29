@@ -7,8 +7,8 @@ class Model(nn.Module):
 
     piece_embed: nn.Embedding
     y_embed: nn.Parameter
-    proj_in: nn.Conv1d
-    proj_out: nn.Conv1d
+    proj_in: nn.Linear
+    proj_out: nn.Linear
     blocks: nn.ModuleList
 
     def __init__(self, piece_embed_dim: int):
@@ -16,10 +16,10 @@ class Model(nn.Module):
         self.piece_embed_dim = piece_embed_dim
 
         self.piece_embed = nn.Embedding(7, piece_embed_dim)
-        self.y_embed = nn.Parameter(torch.randn((128, 20)) * 0.02)
+        self.y_embed = nn.Parameter(torch.randn((20, 128)) * 0.02)
 
-        self.proj_in = nn.Conv1d(10 + 5 * piece_embed_dim, 128, 1)
-        self.proj_out = nn.Conv1d(128, 7 * 4 * 10, 1)
+        self.proj_in = nn.Linear(10 + 5 * piece_embed_dim, 128)
+        self.proj_out = nn.Linear(128, 7 * 4 * 10)
 
         self.blocks = nn.ModuleList(
             TransformerBlock(128, 128, 3, 2, 0.05)
@@ -41,17 +41,13 @@ class Model(nn.Module):
         queue = self.piece_embed(queue)
         queue = queue.flatten(1)
 
-        # Transpose field to interpret columns as channels.
-        # field: (batch, 10, 20)
-        field = field.transpose(1, 2)
-
         # Combine field with queue expanded per-row.
-        # combined: (batch, 10 + 5 * piece_embed_dim, 20)
-        combined = queue.unsqueeze(2).expand((-1, -1, 20))
-        combined = torch.cat((field, combined), 1)
+        # combined: (batch, 20, 10 + 5 * piece_embed_dim)
+        combined = queue.unsqueeze(-2).expand((-1, 20, -1))
+        combined = torch.cat((field, combined), -1)
 
         # Apply blocks.
-        # pred: (batch, 7 * 4 * 10, 20)
+        # pred: (batch, 20, 10 * 7 * 4)
         pred = self.proj_in(combined)
         for block in self.blocks:
             pred = block(pred + self.y_embed)
@@ -61,9 +57,9 @@ class Model(nn.Module):
         pred = pred.flatten(1)
         pred = F.log_softmax(pred, 1)
 
-        # Reshape and transpose to output shape.
+        # Reshape and permute to output shape.
         # pred: (batch, 7, 4, 20, 10)
-        pred = pred.reshape((-1, 7, 4, 10, 20))
-        pred = pred.transpose(-1, -2)
+        pred = pred.reshape((-1, 20, 10, 7, 4))
+        pred = pred.permute((0, 3, 4, 1, 2))
 
         return pred

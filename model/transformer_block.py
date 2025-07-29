@@ -1,65 +1,56 @@
 import torch, torch.nn as nn, torch.nn.functional as F
 
-from .mha import MultiheadAttention
-from .channel_layer_norm import ChannelLayerNorm
-
 class TransformerBlock(nn.Module):
-    in_channels: int
-    hidden_channels: int
+    embed_dim: int
+    hiddem_dim: int
     kernel_size: int
     num_heads: int
     p_dropout: float
 
-    attn: MultiheadAttention
-    norm1: ChannelLayerNorm
+    attn: nn.MultiheadAttention
+    norm1: nn.LayerNorm
     conv1: nn.Conv1d
     conv2: nn.Conv1d
-    norm2: ChannelLayerNorm
+    norm2: nn.LayerNorm
 
     def __init__(
         self,
-        in_channels: int,
-        hidden_channels: int,
+        embed_dim: int,
+        hidden_dim: int,
         kernel_size: int,
         num_heads: int,
         p_dropout: float = 0.0,
     ):
         super().__init__()
 
-        self.in_channels = in_channels
-        self.hidden_channels = hidden_channels
+        self.embed_dim = embed_dim
+        self.hiddem_dim = hidden_dim
         self.kernel_size = kernel_size
         self.num_heads = num_heads
         self.p_dropout = p_dropout
 
         assert kernel_size % 2 != 0
 
-        self.attn = MultiheadAttention(
-            in_channels,
-            in_channels,
-            num_heads,
-            p_dropout,
-        )
-        self.norm1 = ChannelLayerNorm(in_channels)
-        self.conv1 = nn.Conv1d(in_channels, hidden_channels, kernel_size, padding="same")
-        self.conv2 = nn.Conv1d(hidden_channels, in_channels, kernel_size, padding="same")
-        self.norm2 = ChannelLayerNorm(in_channels)
+        self.attn = nn.MultiheadAttention(embed_dim, num_heads, p_dropout, batch_first=True)
+        self.norm1 = nn.LayerNorm(embed_dim)
+        self.conv1 = nn.Conv1d(embed_dim, hidden_dim, kernel_size, padding="same")
+        self.conv2 = nn.Conv1d(hidden_dim, embed_dim, kernel_size, padding="same")
+        self.norm2 = nn.LayerNorm(embed_dim)
 
     def forward(self, seq: torch.Tensor) -> torch.Tensor:
         """
         Input shapes:
-            - seq: `(batch, in_channels, seq_len)`
-            - mask: `(batch, 1, seq_len)`
+            - seq: `(batch, seq_len, embed_dim)`
         
         Returned shapes:
-            - output: `(batch, in_channels, seq_len)`
+            - output: `(batch, seq_len, embed_dim)`
         """
 
         # Apply self-attention.
         # residual: (batch, in_channels, seq_len)
         # seq: (batch, in_channels, seq_len)
         residual = seq
-        seq = self.attn(seq, seq, seq)
+        seq = self.attn(seq, seq, seq, need_weights=False)[0]
 
         # Apply dropout and layer norm.
         # seq: (batch, in_channels, seq_len)
@@ -70,10 +61,12 @@ class TransformerBlock(nn.Module):
         # residual: (batch, in_channels, seq_len)
         # seq: (batch, in_channels, seq_len)
         residual = seq
+        seq = seq.transpose(-1, -2)
         seq = self.conv1(seq)
         seq = torch.relu(seq)
         seq = F.dropout(seq, self.p_dropout, self.training)
         seq = self.conv2(seq)
+        seq = seq.transpose(-1, -2)
 
         # Apply dropout and layer norm.
         # seq: (batch, seq_len, embed_dim)
